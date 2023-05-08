@@ -6,46 +6,48 @@
 #include <type_traits>
 #include <vector>
 
+// Let pi be a prefix function of a string.
+//   Let's analyse pi's properties.
+// [------------------]
+// [     ]     |
+//      [     ]i
+// pi[i] can't be greater than pi[i-1]+1,
+//   otherwise pi[i-1] >= pi[i]-1.
+//                                  i
+//               [----------------------]
+//   p[i-1]       111111111111      |
+//                      111111111111|
+//   p[i]              22222222222222|
+//                22222222222222     | Suppose pi[i] > pi[pi[i - 1]-1], then
+//   pnew[i-1]    3333333333333     |
+//                     3333333333333|
+// It's so iff string[i] == string[pi[i-1]].
+//   If it's so, pi[i] is atleast pi[i-1]+1, but can't be greater.
+//   If pi[i-1]+1=pi[i], then naturally
+//   string[pi[i-1]] (prefix of len i+1) == string[i+1]
+// Try to make it pi[i - 1]+1, otherwise
+//   select the next one that is possible.
+//   It can be proven that lengths between
+//   pi[i-1] and pi[pi[i-1]-1]+2 can't be
+//   the value of prefix_function in this
+//   position. If pi[i] > pi[pi[i-1]-1],
+//   then pi[i - 1]
+//                                  i
+//               [----------------------]
+//   p[i-1]       111111111111      |
+//                      111111111111|
+//   p[p[i-1]-1]  222      222      |
+//                      222         | Suppose pi[i] > pi[pi[i - 1]-1], then
+//                33333         33333|
+//                      33333        
+//                        3333t
+//   pi[pi[i-1]-1] is at least 4, when we
+//   assumed 3.
+//   Just now analyse some examples with such a picture.
 static std::vector<size_t> CalculatePrefixFunc(std::string_view string) {
 	std::vector<size_t> prefix_func(string.size(), 0);
 	for (size_t i = 1; i < string.size(); ++i) {
 		size_t candidate = prefix_func[i - 1] + 1;
-		// [------------------]
-		// [     ]     |
-		//      [     ]i
-		// pi[i] can't be greater than pi[i-1]+1,
-		//   otherwise pi[i-1] >= pi[i]-1.
-		//                                  i
-		//               [----------------------]
-		//   p[i-1]       111111111111      |
-		//                      111111111111|
-		//   p[i]              22222222222222|
-		//                22222222222222     | Suppose pi[i] > pi[pi[i - 1]-1], then
-		//   pnew[i-1]    3333333333333     |
-		//                     3333333333333|
-		// It's so iff string[i] == string[pi[i-1]].
-		//   If it's so, pi[i] is atleast pi[i-1]+1, but can't be greater.
-		//   If pi[i-1]+1=pi[i], then naturally
-		//   string[pi[i-1]] (prefix of len i+1) == string[i+1]
-		// Try to make it pi[i - 1]+1, otherwise
-		//   select the next one that is possible.
-		//   It can be proven that lengths between
-		//   pi[i-1] and pi[pi[i-1]-1]+2 can't be
-		//   the value of prefix_function in this
-		//   position. If pi[i] > pi[pi[i-1]-1],
-		//   then pi[i - 1]
-		//                                  i
-		//               [----------------------]
-		//   p[i-1]       111111111111      |
-		//                      111111111111|
-		//   p[p[i-1]-1]  222      222      |
-		//                      222         | Suppose pi[i] > pi[pi[i - 1]-1], then
-		//                33333         33333|
-		//                      33333        
-		//                        3333t
-		//   pi[pi[i-1]-1] is at least 4, when we
-		//   assumed 3.
-		//   Just now analyse some examples with such a picture.
 		while (candidate > 1 && string[candidate - 1] != string[i]) {
 			candidate = prefix_func[(candidate - 1) - 1] + 1;
 		}
