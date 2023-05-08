@@ -66,9 +66,18 @@ static std::vector<size_t> CalculatePrefixFunc(std::string_view string) {
 	return prefix_func;
 }
 
+#if defined(NDEBUG)
+#define assert_with_node(expr, msg)
+#else
+#define assert_with_note(expr, msg) if (!(expr)) { puts(msg); assert(false); }
+#endif
+
 static std::vector<size_t> FindSubstr(std::string_view pattern, std::string_view text) {
 	std::string joined(pattern);
-	assert(pattern.find('#') == std::string_view::npos); // std::string_view::contains and std::string::contains from c++23 onwards, wanted to use pattern.contains().
+	// TODO: use pattern.contains().
+	//   std::string_view::contains and std::string::contains are
+	//   available from c++23 onwards.
+	assert_with_note(pattern.find('#') == std::string_view::npos, "string must contain a '#'.");
 	joined.push_back('#');
 	joined += text;
 	
