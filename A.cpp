@@ -93,16 +93,18 @@ static std::vector<size_t> FindSubstr(std::string_view pattern, std::string_view
 	return result;
 }
 
-int main() {
+namespace Input {
 	static const size_t kMaxStrLen = 50 * 1000;
 	static const char * const kFormatStr = "%50000s";
+};
+
+int main() {	
+	std::unique_ptr<char[]> buffer = std::make_unique<char[]>(Input::kMaxStrLen + 1);
 	
-	std::unique_ptr<char[]> buffer = std::make_unique<char[]>(kMaxStrLen + 1);
-	
-	scanf(kFormatStr, buffer.get());
+	scanf(Input::kFormatStr, buffer.get());
 	std::string text(buffer.get());
 
-	scanf(kFormatStr, buffer.get());
+	scanf(Input::kFormatStr, buffer.get());
 	std::string pattern(buffer.get());
 
 	std::vector<size_t> result = FindSubstr(pattern, text);
