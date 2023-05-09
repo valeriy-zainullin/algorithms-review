@@ -1,5 +1,5 @@
 #include <cassert>
-#include <cstdio>
+#include <iostream>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -93,23 +93,16 @@ static std::vector<size_t> FindSubstr(std::string_view pattern, std::string_view
 	return result;
 }
 
-namespace Input {
-	static const size_t kMaxStrLen = 50 * 1000;
-	static const char * const kFormatStr = "%50000s";
-};
+int main() {
+	std::string text;
+	std::cin >> text;
 
-int main() {	
-	std::unique_ptr<char[]> buffer = std::make_unique<char[]>(Input::kMaxStrLen + 1);
-	
-	scanf(Input::kFormatStr, buffer.get());
-	std::string text(buffer.get());
-
-	scanf(Input::kFormatStr, buffer.get());
-	std::string pattern(buffer.get());
+	std::string pattern;
+	std::cin >> pattern;
 
 	std::vector<size_t> result = FindSubstr(pattern, text);
 	for (size_t item: result) {
-		printf("%zu\n", item);
+		std::cout << item << '\n';
 	}
 	
 	return 0;
