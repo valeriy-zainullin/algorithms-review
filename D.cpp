@@ -3,7 +3,7 @@ Z-функция + динамика. Можно ли разбить префик
 */
 
 #include <cassert>
-#include <cstdio>
+#include <iostream>
 #include <string>
 #include <vector>
 
@@ -122,31 +122,26 @@ std::vector<size_t> CalculatePartition(const std::string& source_word, const std
 }
 
 int main() {
-	constexpr size_t kMaxStrLen = 75 * 1000 + 1;
-	constexpr const char* const kStrFormat = "%75000s";
-	static char k_buffer[kMaxStrLen + 1] = {0};
+	std::string source_word;
+	std::string target_word;
 	
-	scanf(kStrFormat, k_buffer);
-	std::string source_word(k_buffer);
-
-	scanf(kStrFormat, k_buffer);
-	std::string target_word(k_buffer);
+	std::cin >> source_word >> target_word;
 	
 	std::vector<size_t> result = CalculatePartition(source_word, target_word);
 	if (result.empty()) {
-		printf("Yes\n");
+		std::cout << "Yes\n";
 		return 0;
 	}
 	
-	printf("No\n");
+	std::cout << "No\n";
 	result.push_back(target_word.size());
 	for (size_t i = 0; i < result.size() - 1; ++i) {
 		for (size_t pos = result[i]; pos < result[i + 1]; ++pos) {
-			printf("%c", target_word[pos]);
+			std::cout << target_word[pos];
 		}
-		printf(" ");
+		std::cout << " ";
 	}
-	printf("\n");
+	std::cout << "\n";
 
 	return 0;
 }
