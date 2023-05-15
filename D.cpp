@@ -7,6 +7,12 @@ Z-функция + динамика. Можно ли разбить префик
 #include <string>
 #include <vector>
 
+#if defined(NDEBUG)
+#define assert_with_node(expr, msg)
+#else
+#define assert_with_note(expr, msg) if (!(expr)) { puts(msg); assert(false); }
+#endif
+
 std::vector<size_t> CalculateZFunc(const std::string& string) {
 	std::vector<size_t> z_func(string.size(), 0);
 	
@@ -16,7 +22,7 @@ std::vector<size_t> CalculateZFunc(const std::string& string) {
 	size_t rightmost_z_block_end = 0;
 	for (size_t i = 1; i < string.size(); ++i) {
 		if (rightmost_z_block_end < i) {
-			assert(rightmost_z_block_end == i - 1);
+			assert_with_note(rightmost_z_block_end == i - 1, "Rightmost_z_block can only fall behind by one position.");
 			
 			if (string[0] != string[i]) {
 				z_func[i] = 0;
@@ -61,8 +67,8 @@ std::vector<size_t> CalculateZFunc(const std::string& string) {
 }
 
 std::vector<size_t> CalculatePartition(const std::string& source_word, const std::string& target_word) {
-	assert(!source_word.empty());
-	assert(!target_word.empty());
+	assert_with_note(!source_word.empty(), "Source word mustn't be empty.");
+	assert_with_note(!target_word.empty(), "Target word mustn't be empty.");
 
 	std::string joined = source_word + "#" + target_word;
 	std::vector<size_t> z_func = CalculateZFunc(joined);
