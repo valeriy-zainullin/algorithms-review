@@ -99,7 +99,6 @@ std::vector<size_t> CalculatePartition(const std::string& source_word, const std
 				last_partitionable_suffix_start = pos;
 			}
 		}
-		// printf("target_word_pos = %zu, z_func[pos] = %zu, dp_can_partition_suffix_at[pos] = %u, dp_next_suffix_start[pos] = %zu, last_partitionable_suffix_start = %zu.\n", pos - source_word.size(), z_func[pos], static_cast<unsigned>(static_cast<bool>(dp_can_partition_suffix_at[pos])), dp_next_suffix_start[pos], last_partitionable_suffix_start);
 	}
 
 	if (!dp_can_partition_suffix_at[source_word.size() + 1]) {
