@@ -10,6 +10,8 @@
 #include <unordered_map>
 #include <vector>
 
+#define ENABLE_64BIT_HASH 0
+
 // Good articles about polynomial hashing:
 //   (1) https://codeforces.com/blog/entry/60445?locale=en
 //   (2) https://codeforces.com/blog/entry/17507
@@ -17,7 +19,10 @@
 struct StrHash {
 	uint32_t hash1;
 	uint32_t hash2;
-	// uint64_t hash3; // TL, need to reduce number of hashes.
+
+	#if ENABLE_64BIT_HASH
+		uint64_t hash3; // TL, need to reduce number of hashes.
+	#endif
 
 public:
 	uint64_t ToU64() const {
@@ -25,9 +30,11 @@ public:
 	}
 	
 private:
-	static constexpr const uint32_t kMod1 = 1000 * 1000 * 1000 + 7;
-	static constexpr const uint32_t kMod2 = 1073676287;
-	// kMod3 = 2^64
+	struct Modules {
+		static constexpr const uint32_t kMod1 = 1000 * 1000 * 1000 + 7;
+		static constexpr const uint32_t kMod2 = 1073676287;
+		// kMod3 = 2^64
+	};
 
 	// Я думаю так, мб есть какие-то обсуждения в сообществе
 	//   на эту тему..
@@ -74,16 +81,28 @@ private:
 	friend class StrHasher;
 };
 std::ostream& operator<<(std::ostream& stream, const StrHash& hash) {
-	stream << '(' << hash.hash1 << ',' << hash.hash2 << /*',' << hash.hash3 <<*/ ')';
+	#if ENABLE_64BIT_HASH
+		stream << '(' << hash.hash1 << ',' << hash.hash2 << ',' << hash.hash3 << ')';
+	#else
+		stream << '(' << hash.hash1 << ',' << hash.hash2 << /*',' << hash.hash3 <<*/ ')';
+	#endif
+	
 	return stream;
 }
 
 uint32_t StrHash::base_1 = StrHash::GetRandomBase();
 uint32_t StrHash::base_2 = StrHash::GetRandomBase();
-// uint32_t StrHash::base_3 = StrHash::GetRandomBase();
+
+#if ENABLE_64BIT_HASH
+	uint32_t StrHash::base_3 = StrHash::GetRandomBase();
+#endif
 
 bool operator==(const StrHash& lhs, const StrHash& rhs) {
-	return lhs.hash1 == rhs.hash1 && lhs.hash2 == rhs.hash2 /*&& lhs.hash3 == rhs.hash3*/;
+	#if ENABLE_64BIT_HASH
+		return lhs.hash1 == rhs.hash1 && lhs.hash2 == rhs.hash2 && lhs.hash3 == rhs.hash3;
+	#else
+		return lhs.hash1 == rhs.hash1 && lhs.hash2 == rhs.hash2;
+	#endif
 }
 
 bool operator<(const StrHash& lhs, const StrHash& rhs) {
@@ -95,11 +114,11 @@ bool operator<(const StrHash& lhs, const StrHash& rhs) {
 		return lhs.hash2 < rhs.hash2;
 	}
 	
-	/*
-	if (lhs.hash3 != rhs.hash3) {
-		return lhs.hash3 < rhs.hash3;
-	}
-	*/
+	#if ENABLE_64BIT_HASH
+		if (lhs.hash3 != rhs.hash3) {
+			return lhs.hash3 < rhs.hash3;
+		}
+	#endif
 
 	// Equal.
 	return false;
@@ -119,7 +138,9 @@ public:
 
 		InitBasePowArray<StrHash::kMod1>(base1_pow_, StrHash::base_1, length);
 		InitBasePowArray<StrHash::kMod2>(base2_pow_, StrHash::base_2, length);
-		// InitBasePowArrayMod64(base3_pow_, StrHash::base_3, length);
+		#if ENABLE_64BIT_HASH
+			InitBasePowArrayMod64(base3_pow_, StrHash::base_3, length);
+		#endif
 		
 		// Хешируем по каждой паре (основание, модуль) по отдельности.
 		InitHashArray<StrHash::kMod1>(hash1_, StrHash::base_1, begin, length);
@@ -140,9 +161,15 @@ public:
 	
 		uint32_t result_hash1 = HashSubstrSingleBaseMod<StrHash::kMod1>(hash1_, base1_pow_, start, end);
 		uint32_t result_hash2 = HashSubstrSingleBaseMod<StrHash::kMod2>(hash2_, base2_pow_, start, end);
-		// uint64_t result_hash3 = HashSubstrSingleBaseMod64(hash3_, base3_pow_, start, end);
+		#if ENABLE_64BIT_HASH
+			uint64_t result_hash3 = HashSubstrSingleBaseMod64(hash3_, base3_pow_, start, end);
+		#endif  
 		
-		return StrHash{result_hash1, result_hash2/*, result_hash3*/};
+		#if ENABLE_64BIT_HASH
+			return StrHash{result_hash1, result_hash2, result_hash3};
+		#else
+			return StrHash{result_hash1, result_hash2};
+		#endif
 	}
 private:
 	// Making mod a template parameter,
@@ -193,7 +220,7 @@ private:
 		return static_cast<uint32_t>((Mod + hash[end] - static_cast<uint64_t>(hash[start]) * base_pow[substr_len] % Mod) % Mod);
 	}
 
-	/*
+	#if 
 	void InitBasePowArrayMod64(std::vector<uint64_t>& base_pow, uint32_t base, size_t str_length) {
 		base_pow.resize(str_length + 1, 0);
 		base_pow[0] = 1;
@@ -325,33 +352,21 @@ static std::vector<size_t> FindPalindromicSuffixes(std::string_view text) {
 	return result;
 }
 
-int main() {
-	freopen("input.txt", "r", stdin);
-
-	size_t num_words = 0;
-	scanf("%zu", &num_words);
-	
-	static constexpr const size_t       kStrMaxLen = 10;
-	static constexpr const char * const kStrFmt    = "%10s";
-	
-	struct Word {
+std::vector<std::tuple<std::size_t, std::size_t>> FindPalindromicConcats(std::vector<std::string>& words) {
+	struct Entry {
 		std::string text;
 		size_t position;
 	};
-	
-	std::vector<Word> words(num_words);
-	
-	auto buffer = std::make_unique<char[]>(kStrMaxLen + 1);
-	for (size_t i = 0; i < num_words; ++i) {
-		scanf(kStrFmt, buffer.get());
-		
-		std::string word(buffer.get());
+
+	std::vector<Entry> entries; 
+
+	for (size_t i = 0; i < words.size(); ++i) {
 		// From c++20 onwards: words[i] = {.text = std::move(word), .position = i + 1};
 		// The contest had c++17 only.
-		words[i] = {std::move(word), i + 1};		
+		entry[i] = {std::move(word), i + 1};		
 	}
 	
-	std::sort(words.begin(), words.end(), [](const Word& lhs, const Word& rhs) {
+	std::sort(entries.begin(), entries.end(), [](const Entry& lhs, const Entry& rhs) {
 		return lhs.text.size() < rhs.text.size();
 	});
 
@@ -378,7 +393,7 @@ int main() {
 	//    при которых s_k + s_j палиндром.
 	// Т.е. в каждой паре A_2 длины слов различны,
 	//    посчитаем пару для слова с наибольшей
-	//    длиной в ней.
+      	//    длиной в ней.
 	// Почему так надо? Потому что, перебирая слово,
 	//   надо знать, оно самое длинное или самое
 	//   маленькое по длине, т.к. от этого зависит то,
@@ -386,81 +401,7 @@ int main() {
 	//   работает.
 	
 	std::unordered_map<uint64_t, std::vector<size_t>> hash_to_positions;
-	
-	std::vector<std::pair<size_t, size_t>> result;
-	
-	/*
-	for (size_t i = 0; i < words.size(); ++i) {
-		std::string& word = words[i];
-	
-		size_t word_len = word.size();
-		// Если наша строка годится в качестве первой.
-		//   Перебираем, какую длину имела вторая часть.
-		for (size_t second_half_len = 1; second_half_len <= word_len; ++second_half_len) {
-			// В развёрнутой строке префикс становится суффиксом и разворачивается.
-			//   Нам как раз нужен развёрнутый префикс, потому это суффикс. И затем
-			//   получить его хеш.
-			auto it = hash_to_positions.find(hashers_reversed[i].HashSubstr(word_len - second_half_len, word_len));
-				
-			if (it != hash_to_positions.end()) {
-				for (size_t position: it->second) {
-					printf("[1] %zu %zu\n", i + 1, position);
-					result.emplace_back(i + 1, position);
-				}
-			}
-		}
-		// Если наша строка годится в качестве второй.
-		//   Перебираем, какую длину имела первая часть.
-		// Возможно, первая часть длиннее, тогда префикс
-		//   даёт с нашим словом палиндром, а затем хвост
-		//   является палиндромом сам.
-		for (size_t first_half_len = 1; first_half_len <= word_len; ++first_half_len) {
-			// В развёрнутой строке суффикс становится префиксом и разворачивается.
-			//   Нам как раз нужен развёрнутый суффикс, потому это префикс. И затем
-			//   получить его хеш.
-			auto it = hash_to_positions.find(hashers_reversed[i].HashSubstr(0, first_half_len));
-			
-			if (it != hash_to_positions.end()) {
-				for (size_t position: it->second) {
-					printf("[2] %zu %zu\n", position, i + 1);
-					result.emplace_back(position, i + 1);
-				}
-			}
-		}
-		// Добавляем хеши с нашим словом в словарь. На последующих итерациях
-		//   учтут те пары, в которых элемент позиции этого слова не
-		//   максимальный (другой элемент больше).
-		// Если наше слово станет первым, а у второго длина меньше,
-		//   совпадёт какой-то префикс, а суффикс будет палиндромом.
-		std::vector<size_t> palindromic_suffixes = FindPalindromicSuffixes(words[i]);
-		for (size_t suffix_start: palindromic_suffixes) {
-			StrHash hash = hashers[i].HashSubstr(0, suffix_start);
-			hash_to_positions[hash].push_back(i + 1);
-		}
-		// Если наше слово станет вторым, а у первого длина меньше,
-		//   совпадёт какой-то суффикс, а префикс будет палиндромом.
-		// Чтобы найти палиндромные префикс, найдем палиндромные суффиксы.
-		//   Префикс при развороте становится суффиксом и палиндромность
-		//   сохраняется.
-		std::reverse(word.begin(), word.end());
-		std::vector<size_t> palindromic_prefixes = FindPalindromicSuffixes(word);
-		for (size_t& value: palindromic_prefixes) {
-			// From start in reversed str to suffix len, which is prefix len we need.
-			value = words[i].size() - value;
-		}
-		std::reverse(word.begin(), word.end());
-		for (size_t prefix_len: palindromic_prefixes) {
-			StrHash hash = hashers[i].HashSubstr(prefix_len, word.size());
-			hash_to_positions[hash].push_back(i + 1);
-		}
-		
-		// Второе слово в паре может быть больше или такой же длины.
-		//   Потому всю строку тоже добавляем.
-		StrHash hash = hashers[i].HashSubstr(0, word_len);
-		hash_to_positions[hash].push_back(i + 1);
-	}
-	*/
-	
+
 	// Выделяем отрезки слов одной длины.
 	//   Для каждого из них сначала считаем
 	//   палиндромы, где они самые длинные,
@@ -487,8 +428,6 @@ int main() {
 			size_t word_len      = words[i].text.size();
 			size_t word_position = words[i].position;
 			
-			// printf("i = %zu, word_len = %zu, word_position = %zu.\n", i, word_len, word_position);
-
 			// Если наша строка годится в качестве первой.
 			//   Перебираем, какую длину имела вторая часть.
 			//   Её длина должна быть меньше (текущая строка
@@ -616,6 +555,22 @@ int main() {
 	for (const auto& [first, second]: result) {
 		printf("%zu %zu\n", first, second);
 	}
-	
+}
+
+int main() {
+	freopen("input.txt", "r", stdin);
+
+	size_t num_words = 0;
+	std::cin >> num_words;
+		
+	std::vector<std::string> words(num_words);
+
+	for (auto& word: words) {
+		std::string word;
+		std::cin >> word;
+	}
+			
+	std::vector<std::pair<size_t, size_t>> result;	
+		
 	return 0;
 }
