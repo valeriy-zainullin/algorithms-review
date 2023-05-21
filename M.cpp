@@ -15,6 +15,13 @@ namespace SuffixArray {
 	constexpr char kTextEndChr = '\10';
 	constexpr char kSrcStrAlphabetMaxChr = 127; //'z';
 
+	/**
+	 * \brief   Calculates suffix array with Manber-Myers algorithm.
+	 *
+	 * \param[in]     text                String to sort suffixes of.
+	 * \param[out]    suffix_array        Output array of sorted suffix indices.
+	 * \param[in,out] inv_suffix_array    Inverse suffix array: suffix array position by suffix index.
+	 */
 	static void Calculate(std::string_view text, std::vector<size_t>& suffix_array, std::vector<size_t>& inv_suffix_array) {
 		assert_with_note(!text.empty(), "Test mustn't be empty.");
 		for (size_t i = 0; i < text.size(); ++i) {
