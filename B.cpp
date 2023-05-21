@@ -7,6 +7,12 @@
 
 #define DEBUG 0
 
+#if defined(NDEBUG)
+#define assert_with_node(expr, msg)
+#else
+#define assert_with_note(expr, msg) if (!(expr)) { puts(msg); assert(false); }
+#endif
+
 struct Point {
 	int32_t x;
 	int32_t y;
@@ -15,7 +21,7 @@ struct Point {
 // Алгоритм Джарвиса (заворачивания подарка).
 // TODO: написать объяснение, доказать.
 std::vector<size_t> MakeConvexHull(const std::vector<Point>& points) {
-	assert(!points.empty());
+	assert_with_note(!points.empty(), "Points mustn't be empty. Cannot make convex hull of an empty set.");
 	
 	std::vector<size_t> indices(points.size(), 0);
 	for (size_t i = 0; i < points.size(); ++i) {
@@ -66,22 +72,8 @@ std::vector<size_t> MakeConvexHull(const std::vector<Point>& points) {
 	#if DEBUG
 		fprintf(stderr, "selected_index = %zu.\n", selected_index);
 	#endif
-	
-	// Все точки в первом и втором квадранте, сортируем их по
-	//   возрастанию угла направляющего вектора от выбранной
-	//   точки. Или, что то же самое, т.к. они в первых двух
-	//   квадрантах, по убыванию контангенса этого угла, можно
-	//   посчитать этот котангенс по координатам.
-	// Так мы получим обход против часовой, тогда ещё используем
-	//   предикат "правая тройка". Обычно пишу так, но в задаче
-	//   хотят обход по часовой, потому сортируем по убыванию
-	//   тангенса (теперь все точки в первом и четвертом
-	//   квадранте), по убыванию угла. И предикат используем не
-	//   "правая тройка", а "левая тройка".
-	// При совпадении углов нужно сортировать по расстоянию до
-	//   выбранной точки, иначе есть пример, когда алгоритм не
-	//   работает, он ниже. Ещё можно почитать об алгоритме по
-	//   ссылке: https://wcipeg.com/wiki/Convex_hull
+
+	// Сортировка по полярному углу. Детали в B_notes.cpp. Прочитайте, буду рад ответить на вопросы.
 	std::sort(
 		indices.begin(),
 		indices.end(),
@@ -95,21 +87,9 @@ std::vector<size_t> MakeConvexHull(const std::vector<Point>& points) {
 			
 			int32_t p2_dx = p2.x - start.x;
 			int32_t p2_dy = p2.y - start.y;
-
-			// p1_dy / p1_dx -> p1_tg
-			// p2_dy / p2_dx -> p2_tg.
-			// p1_tg > p2_tg.
-			// p1_dy / p1_dx > p2_dy / p2_dx.
-			// перенесём знак в p1_dy, p2_dy,
-			//   если p1_dx или p2_dx отрицательны.
-			//   Затем умножим обе части на p1_dx и p2_dx.
-			// (sign1 * p1_dy) p2_dx > (sign2 * p2_dy) p1_dx.
-			// Отдельно нужно разобрать случай, когда dx равен нулю.
-			// Тогда угол равен pi/2, т.к. выбрали самую нижнюю из самых левых.
-			//   Если бы были повторы, могли бы получить ещё одну точку, которая
-			//   совпадала бы с выбранной. Угол неизвестен. Мы бы просто всегда
-			//   её брали, если границы не входят в фигуру, или не брали бы,
-			//   удаляли бы повторы так же, если бы границы входили.
+			
+			// Сравнение в сортировке по полярному углу. Детали в B_notes.cpp. Прочитайте,
+			//   буду рад ответить на вопросы.
 			
 			if (p1_dx == 0 && p2_dx != 0) {
 				return true;
@@ -158,35 +138,11 @@ std::vector<size_t> MakeConvexHull(const std::vector<Point>& points) {
 	
 	std::vector<size_t> points_in_hull = {selected_index};
 	
-	// Чтобы алгоритм создавал правильную оболочку в случае,
-	//   когда могут быть две точки с одним углом, нужно
-	//   выбирать либо упорядочивать по убыванию расстояния,
-	//   либо по возрастанию: если у нас есть две точки с
-	//   одним углом, ещё ок, а если три, то выберем среднюю,
-	//   затем пусть идет более дальняя, её возьмём, а затем
-	//   пусть более ближняя. Тогда она выкинет более дальнюю,
-	//   мы потеряем эту дальнюю точку. Потому при совпадении
-	//   углов (тангенсов), сортируем по расстоянию.
+	// Замечание 1 из B_notes.cpp. Прочитайте, буду рад ответить на вопросы.
 	for (size_t new_point: indices) {
 		const Point& p3 = points[new_point];
 		while (points_in_hull.size() >= 2) {
-			// Пусть
-			//   p1 -- points_in_hull[points_in_hull.size()-2],
-			//   p2 -- points_in_hull[points_in_hull.size()-1],
-			//   p3 -- new_point.
-			// Если предыдущая точка ломает выпуклость,
-			//   т.е. угол от вектора (p1, p2) к вектору
-			//   (p2, p3) против часовой меньше pi, то
-			//   выбрасываем p2, она будет внутри выпуклой
-			//   оболочки, т.к. внутри треугольника
-			//   (selected_point, p1, p3).
-			// Если угол равен pi, тоже выбрасываем, точка на
-			//   границе считается внутри фигуры (если было бы
-			//   не так, включали бы), 
-			// Проверить это можно с помощью "псевдоскалярного"
-			//   произведения, ещё его называют предикатом
-			//   "правая тройка", а ещё это третья координата
-			//   векторного произведения.
+			// Замечание 2 из B_notes.cpp. Прочитайте, буду рад ответить на вопросы.
 			
 			const Point& p1 = points[points_in_hull[points_in_hull.size() - 2]];
 			const Point& p2 = points[points_in_hull[points_in_hull.size() - 1]];
@@ -251,6 +207,33 @@ std::vector<size_t> MakeConvexHull(const std::vector<Point>& points) {
 	return points_in_hull;
 }
 
+// Считает ориентированную площадь методом трапеций.
+int64_t CalculateDoubledArea(const std::vector<Point>& polygon) {
+	int64_t result = 0;
+	for (size_t i = 0; i + 1 < polygon.size(); ++i) {
+		const Point& p1 = polygon[i];
+		const Point& p2 = polygon[i + 1];
+	
+		int32_t y1 = p1.y;
+		int32_t y2 = p2.y;
+		int32_t dx = p2.x - p1.x;
+		
+		result += static_cast<int64_t>(y1 + y2) * dx;
+	}
+	{
+		const Point& p1 = polygon.back();
+		const Point& p2 = polygon.front();
+	
+		int32_t y1 = p1.y;
+		int32_t y2 = p2.y;
+		int32_t dx = p2.x - p1.x;
+		
+		result += static_cast<int64_t>(y1 + y2) * dx;
+	}
+	
+	return result;
+}
+
 int main() {
 	size_t num_points = 0;
 	scanf("%zu", &num_points);
@@ -268,29 +251,12 @@ int main() {
 		printf("%" PRId32 " %" PRId32 "\n", point.x, point.y);
 	}
 	
-	// Считаем ориентированную площадь методом трапеций.
-	int64_t result = 0;
-	for (size_t i = 0; i + 1 < convex_hull.size(); ++i) {
-		const Point& p1 = points[convex_hull[i]];
-		const Point& p2 = points[convex_hull[i + 1]];
-	
-		int32_t y1 = p1.y;
-		int32_t y2 = p2.y;
-		int32_t dx = p2.x - p1.x;
-		
-		result += static_cast<int64_t>(y1 + y2) * dx;
+	std::vector<Point> convex_hull_points(convex_hull.size());
+	for (size_t i = 0; i < convex_hull.size(); ++i) {
+		convex_hull_points[i] = points[convex_hull[i]];
 	}
-	{
-		const Point& p1 = points[convex_hull.back()];
-		const Point& p2 = points[convex_hull.front()];
-	
-		int32_t y1 = p1.y;
-		int32_t y2 = p2.y;
-		int32_t dx = p2.x - p1.x;
+	int64_t doubled_area = CalculateDoubledArea(convex_hull_points);
 		
-		result += static_cast<int64_t>(y1 + y2) * dx;
-	}
-	
 	// Это ориентированная площадь, она положительна при
 	//   обходе по часовой (можно представить пример).
 	// Потому модуль брать не надо, т.к. функция
@@ -300,10 +266,10 @@ int main() {
 	//   бы брать.
 	/*
 	if (result < 0) {
-		result *= -1;
+		doubled_area *= -1;
 	}
 	*/
-	assert(result > 0);
+	assert_with_note(doubled_area > 0, "Area is expected to be positive");
 	
 	// Доказать, что точности в один знак достаточно можно
 	//   с помощью формулы Пика: для многоугольника с
@@ -311,10 +277,10 @@ int main() {
 	//   через количество точек сетки на границах и внутри
 	//   фигуры, там есть только деление на два.
 	// Потому ответа оканчивается на .0 или .5.
-	if (result % 2 == 0) {
-		printf("%" PRId64 ".0\n", result / 2);
+	if (doubled_area % 2 == 0) {
+		printf("%" PRId64 ".0\n", doubled_area / 2);
 	} else {
-		printf("%" PRId64 ".5\n", result / 2);
+		printf("%" PRId64 ".5\n", doubled_area / 2);
 	}
 	
 	return 0;
