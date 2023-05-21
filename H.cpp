@@ -243,6 +243,16 @@ std::vector<int32_t> MultiplyPolynomes(const std::vector<int32_t>& lhs, const st
 	return result;
 }
 
+// Перемножает многочлены, у которых старший коэффициент в начале массива, а не младший.
+std::vector<int32_t> MultiplyBigEndianPolynomes(std::vector<int32_t>& polynome_first, std::vector<int32_t>& polynome_second) {
+	std::reverse(polynome_first.begin(), polynome_first.end());
+	std::reverse(polynome_second.begin(), polynome_second.end());
+	std::vector<int32_t> product = MultiplyPolynomes(polynome_first, polynome_second);
+	std::reverse(product.begin(), product.end());
+	
+	return product;
+}
+
 int main() {
 	size_t degree_first = 0;
 	scanf("%zu", &degree_first);
@@ -259,11 +269,8 @@ int main() {
 	for (size_t i = 0; i <= degree_second; ++i) {
 		scanf("%" SCNd32, &polynome_second[i]);
 	}
-
-	std::reverse(polynome_first.begin(), polynome_first.end());
-	std::reverse(polynome_second.begin(), polynome_second.end());
-	std::vector<int32_t> product = MultiplyPolynomes(polynome_first, polynome_second);
-	std::reverse(product.begin(), product.end());
+	
+	std::vector<int32_t> product = MultiplyBigEndianPolynomes(polynome_first, polynome_second);
 	
 	printf("%zu ", product.size() - 1);
 	for (int32_t coefficient: product) {
