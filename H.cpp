@@ -93,12 +93,14 @@ struct MyComplex {
 struct FFT {
 	using DataType = MyComplex; //std::complex<double>;
 	
-	static const int kStraight = 0;
-	static const int kReverse  = 1;
+	enum class Direction {
+		kStraight,
+		kReverse
+	};
 	
 	// Рекурсивная реализация. Работает, но не проходит по времени.
 	// Попробуем сделать без выделения новых массивов и без рекурсии.
-	void operator()(std::vector<DataType>& items, int direction = kStraight) {
+	void operator()(std::vector<DataType>& items, Direction direction = Direction::kStraight) {
 		BitReversePermute(items);
 		int log2_length = __builtin_ctzll(static_cast<uint64_t>(items.size()));
 		
@@ -107,7 +109,7 @@ struct FFT {
 		for (int iteration = 0; iteration < log2_length; ++iteration) {
 			int len = 1 << iteration;
 			DataType primitive_root;
-			if (direction == kStraight) {
+			if (direction == Direction::kStraight) {
 				primitive_root = DataType(std::cos(kPi / len), std::sin(kPi / len));
 			} else {
 				primitive_root = DataType(std::cos(kPi / len), -std::sin(kPi / len));
@@ -123,7 +125,7 @@ struct FFT {
 				}
 			}
 		}
-		if (direction == kReverse) {
+		if (direction == Direction::kReverse) {
 			for (DataType& item: items) {
 				item /= static_cast<double>(items.size());
 			}
@@ -208,7 +210,7 @@ std::vector<int32_t> MultiplyPolynomes(const std::vector<int32_t>& lhs, const st
 		lhs_complex[i] *= rhs_complex[i];
 	}
 	
-	fft(lhs_complex, FFT::kReverse);
+	fft(lhs_complex, FFT::Direction::kReverse);
 	
 	#if DEBUG
 		std::cout << "lhs_complex = [";
