@@ -212,14 +212,16 @@ namespace SuffixArray {
 		inv_suffix_array = std::move(component_by_item);
 	}
 }
-	
+
+namespace Io {
+	constexpr size_t kBufferSize = 4096;
+};
 int main() {
 	std::string text;
 	
-	constexpr size_t kBufferSize = 4096;
-	std::unique_ptr<char[]> buffer = std::make_unique<char[]>(kBufferSize);
+	std::unique_ptr<char[]> buffer = std::make_unique<char[]>(Io::kBufferSize);
 	while (true) {
-		size_t length = fread(buffer.get(), sizeof(char), kBufferSize, stdin);
+		size_t length = fread(buffer.get(), sizeof(char), Io::kBufferSize, stdin);
 		// printf("length = %zu.\n", length);
 		text.insert(text.end(), buffer.get(), buffer.get() + length);
 		
