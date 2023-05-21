@@ -9,9 +9,17 @@
 
 #define DEBUG 0
 
-// Алгоритм, чем-то похожий на алгоритм Месселя-Леймера.
+/**
+ * \brief   Counts number of primes below a number.
+ *
+ * \details Read F_notes.txt to see the algorithm and almost full analysis.
+ *
+ * \param[in]     boundary    A natural number
+ *
+ * \return        Number of primes from 1 to boundary.
+ */
 uint64_t CountPrimesBelowEq(uint64_t boundary) {
-	// Подробнее в F_notes.txt. Техника оказалась интересная.
+	// More in F_notes.txt. Technique turned out to be quite interesting.
 	
 	const auto precalc_sieve = [](const uint64_t max_prime, std::vector<uint64_t>& primes, std::vector<uint64_t>& lowest_prime_div) {
 		lowest_prime_div.assign(max_prime + 1, 0);
