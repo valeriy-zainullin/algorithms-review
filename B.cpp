@@ -20,6 +20,16 @@ struct Point {
 
 // Алгоритм Джарвиса (заворачивания подарка).
 // TODO: написать объяснение, доказать.
+/**
+ * \brief   Calculates convex hull with Jarvis' algorithm.
+ *
+ * \note    This algorithms is also often called
+ *          "Gift wrapping".
+ *
+ * \param[in]     points    Set of Points
+ *
+ * \return        Doubled area (area, multiplied by two).
+ */
 std::vector<size_t> MakeConvexHull(const std::vector<Point>& points) {
 	assert_with_note(!points.empty(), "Points mustn't be empty. Cannot make convex hull of an empty set.");
 	
@@ -207,7 +217,20 @@ std::vector<size_t> MakeConvexHull(const std::vector<Point>& points) {
 	return points_in_hull;
 }
 
-// Считает ориентированную площадь методом трапеций.
+/**
+ * \brief   Calculates oriented area with trapezoidal method.
+ *
+ * \details Can accept both convex and non-convex polygons.
+ *
+ * \note    The area is positive for a convex polygon, if
+ *          the polygon is enumerated clock-wise.
+ *          And negative for a convex-polgon, if it is
+ *          enumerated counter clock-wise.
+ *
+ * \param[in]     a    Polygon vertices.
+ *
+ * \return        Doubled area (area, multiplied by two).
+ */
 int64_t CalculateDoubledArea(const std::vector<Point>& polygon) {
 	int64_t result = 0;
 	for (size_t i = 0; i + 1 < polygon.size(); ++i) {
