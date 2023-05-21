@@ -3,359 +3,216 @@
 #include <memory>
 #include <vector>
 
-static void CalculateSuffixArray(std::string_view text, std::vector<size_t>& suffix_array, std::vector<size_t>& inv_suffix_array) {
-	// Алгоритм Манбера-Майерса. Строим суффиксный массив за
-	//   O(n log(n)) сортировкой зацикленных циклических сдвигов.
-	// Допишем нулевой символ в конец, который меньше всех остальных.
-	// Теперь суффикс из нулевого символа находится в начале массива.
-	// Лексикографический порядок суффиксов не изменится (к ним
-	//   просто дописался ноль):
-	//   если не один из двух суффиксов не был префиксом другого,
-	//   то в какой-то момент они начинают отличаться, до нуля
-	//   сравнение не доходит;
-	//   если был, то суффикс меньшей длины префикс суффикса большей,
-	//   раньше сравнение завершалось из-за разной длины строк, но
-	//   теперь у строки меньшей длины появляется нулевой символ
-	//   раньше.
-	// Другое доказательство: a < b, почему a' < b'? (штрих, если
-	//   допишем ноль). Если a < b при лексикографическом сравнении
-	//   потому, что встречается неравный символ, то до нуля
-	//   сравнение a' < b' не дойдет, сравнение не поменялось. 
-	//   Если a < b из-за того, что длина a < длины b, то теперь
-	//   будет сравниваться ноль с символом b, a' окажется меньше
-	//   b' так же, хотя и по другой причине.
-	// Теперь в конце суффиксов есть нулевой байт. Можем после этого
-	//   байта дописать любые строки, порядок суффиксов не изменится:
-	//   все суффиксы разной длины, потому в разных суффиксах
-	//   находится 0 в разных позициях. До дописанной строки
-	//   сравнение никогда не дойдет, поскольку на первом нуле
-	//   выяснится порядок, кто меньше. У кого встретился ноль, тот и
-	//   меньше. Если сравнить суффикс с самим собой, он тоже всё ещё
-	//   равен, у него хвост тот же.
-	// Тогда допишем к суффиксам ноль, а потом недостающие символы
-	//   из начала, а затем зациклим эту строку, сделав бесконечной.
-	//   Достаточно отсортировать эти бесконечные строки по первым n
-	//   символам, где n -- длина строки, и всё будет готово. Давайте
-	//   отсортируем по первой степени двойки, которая больше или
-	//   равна n. Сортировать будем сортировками подсчётом за O(n),
-	//   количество сравниваемых строк -- n + 1, это O(n), будет
-	//   log_2(n) итераций. Потому O(n log(n)).
-	// Можно дописывать не нулевой символ, а строго меньший всех
-	//   остальных в строке. Все доказательства будут работать.
-	// Для нашей задачи можем дописать заведомо меньший символ
-	//   0x10.
-	// Пусть S_i -- номер отрезка совпадающих элементов i-го суффикса 
-	//   после сортировки с k-ой итерации.
-	//   Как понять, что это такое? В результате любой сортировки
-	//   у нас сначала идут числа с наименьшим значением, затем
-	//   со вторым наибольшим и так далее. И числа с наименьшим,
-	//   если их было несколько, образуют отрезок. Аналогично числа
-	//   со вторым наименьшим значением и так далее.
-	//   Это же происходит и при лексикографической сортировке строк:
-	//     сначала сколько строк одинаковых, наименьших лексикографически,
-	//     затем строки вторые лексикогарфически и так далее. Внутри
-	//     отрезка находятся одинаковые строки, т.е. это просто одинаковые
-	//     строки из набора. Пронумеруем эти отрезки с нуля, по индексу из
-	//     исходного массива будем получать номер такого отрезка, где
-	//     элемент оказался.
-	//   В нашем случае мы сортируем по первым 2^k символам, потому по первым
-	//     k символам строки совпадают. И сами строки не храним, а храним их
-	//     начала в исходной строке.
-	//   Это ещё называют лексикографическим именем (алгоритм
-	//   Каркайнена-Сандерса, построение суфмассива за O(n)), компонентой
-	//   эквивалентности в разборах нашего алгоритма, что имеет смысл, т.к.
-	//    внутри отрезка все элементы равны.
-	// Пусть M_j -- отсортированный массив с началами суффиксов с итерации k.
-	// На итерации k + 1 надо отсортировать пары (S_i, S_{i + 2^k}).
-	//   Отсортировать по второй половине легко: возьмём M'_j = M_{j + 2^k},
-	//   зациклив индекс. Почему это то же самое, что отсортировать по второй
-	//   половине? TODO: посмотреть разбор этого алгоса, дописать. Сейчас я
-	//   TODO: просто знаю, что надо делать.
-	// Чтобы выучить алгоритм, рекомендую записать эти шаги, держать их в
-	//   голове.
-	
-	// Этапы:
-	//  1) дополнение строки,
-	//  1.1) почему дополняем, порядок суффиксов не меняется?
-	//  1.2) почему ...
-	//  1.2) почему ...
-	//  1.2) почему ...
-	//  1.3) почему можно сортировать по первым ceil(log_2(n)) символам и всё ок?
-	//  2) сортировка по первому символа (2^k, k = 0),
-	//  3) сортировка 2^(k + 1), если отсортировано по 2^k:
-	//   3.1) сортировка по второй половине пары, почему действительно отсортровали.
+#if defined(NDEBUG)
+#define assert_with_node(expr, msg)
+#else
+#define assert_with_note(expr, msg) if (!(expr)) { puts(msg); assert(false); }
+#endif
 
-	// Для 1.3 что-то такое можно использовать.
-	// Сортируем зацикленные циклические сдвиги по первым 2^len_log символам.
-	// После сортировать нет смысла, т.к. результаты сравнений не поменяются,
-	//   потому что у всех зацикленных циклических суффиксов есть решетка,
-	//   у различных по длине она в разных местах, потому знак
-	//   неравенства становится гарантированно известен после просмотра
-	//   первых text.size() символов: обязательно встретим решетку, она
-	//   не совпадёт. Мб и раньше будет несовпадение.
+#define DEBUG 0
 
-	assert(!text.empty());
+namespace SuffixArray {
 	constexpr char kTextEndChr = '\10';
-	for (size_t i = 0; i < text.size(); ++i) {
-		assert(text[i] > kTextEndChr);
-	}
-	
-	// Этап 1: дополнение строки.
-	std::string text_mod(text);
-	text_mod.push_back(kTextEndChr);
-
-	// Общие массивы для этапов, остаются с предыдущей итерации
-	//   для новой.
-	std::vector<size_t> sorted_items;
-	std::vector<size_t> component_by_item(text_mod.size(), 0);
-
-	// Этап 2. 
-	// Сортируем по первому символу, это первые 2^k
-	//   символов для k = 0.
-	// Для сортировок подсчётом на следующих итерациях
-	//   надо знать алфавит, чтобы выделить массив.
-	//   Наш алфавит -- номера компонент эквивалентности.
-	//   На (k+1)-ой итерации мы сортируем по номерам с
-	//   предыдущей итерации: TODO: ПРОВЕРИТЬ, КОГДА НАПИШУ КОД.
-	//   Потому можно выделить массив на длину строки элементов,
-	//   т.к. номер компоненты начинается с нуля и их не больше,
-	//   чем суффиксов +1, это длина text_mod. Единственное, в
-	//   чем беда: при сортировке подсчётом по первому символу
-	//   номер компоненты равен номеру символа в алфавите.
-	//   Пересчитаем номер компоненты заново после сортировки, что там.
 	constexpr char kSrcStrAlphabetMaxChr = 127; //'z';
-	// Сортируем строки длины 1.
-	{
-		std::vector<size_t> num_occurs(static_cast<size_t>(kSrcStrAlphabetMaxChr) + 1, 0);
-		for (size_t i = 0; i < text_mod.size(); ++i) {
-			const size_t digit = text_mod[i];
-			num_occurs[digit] += 1;
-		}
-		// Исключающие префиксные суммы, как говорят публикации
-		//   алгоритма Каркайнена-Сандерса.
-		// Вообще, можно делать стабильную сортировку подсчётом
-		//  двумя способами: считать исключающие суммы,
-		//  количество элементов до компоненты, тогда перебирать
-		//  в прямом порядке отсоритрованный массив, в каждую
-		//  компоненту попадает наименьший. Или хранить включая,
-		//  тогда перебирать в обратном, в каждую компоненту
-		//  попадает наибольший, в конец компоненты.
-		std::vector<size_t>& num_items_before_digit = num_occurs;
-		size_t cur_digit_num_items_before = 0;
-		for (size_t i = 0; i <= kSrcStrAlphabetMaxChr; ++i) {
-			size_t num_occurences = num_occurs[i];
-			num_items_before_digit[i] = cur_digit_num_items_before;
-			// For the next iteration this pos is included.
-			cur_digit_num_items_before += num_occurences;
-		}
-		sorted_items.assign(text_mod.size(), 0);
-		for (size_t i = 0; i < text_mod.size(); ++i) {
-			const size_t digit = text_mod[i];
-			sorted_items[num_items_before_digit[digit]] = i;
-			num_items_before_digit[digit] += 1;
-		}
-		// Считаем номера компонент эквивалентности.
-		component_by_item[sorted_items[0]] = 0;
-		for (size_t i = 1; i < sorted_items.size(); ++i) {
-			// Пока это ещё символы, можно смотреть в текст.
-			//   Дальше придется смотреть номера компонент
-			//   эквивалентности. И тогда понадобится новый
-			//   массив, чтобы не перезаписывать старые
-			//   значения.
-			// TODO: make this implementation detail, don't think about it.
-			// TODO: make a small version of this algo, on associative containers,
-			//   in python, so that it's small and concise, ready to be memorised.
-			if (text[sorted_items[i]] != text[sorted_items[i - 1]]) {
-				component_by_item[sorted_items[i]] = component_by_item[sorted_items[i - 1]] + 1;
-			} else {
-				component_by_item[sorted_items[i]] = component_by_item[sorted_items[i - 1]];
-			}
-		}
-	}
 
-	/*
-	printf("text = \"");
-	for (size_t i = 0; i < text.size(); ++i) {
-		if (i != 0 && i % 5 == 0) {
-			printf(" ");
+	static void Calculate(std::string_view text, std::vector<size_t>& suffix_array, std::vector<size_t>& inv_suffix_array) {
+		assert_with_note(!text.empty(), "Test mustn't be empty.");
+		for (size_t i = 0; i < text.size(); ++i) {
+			assert(text[i] > kTextEndChr);
 		}
-		printf("\\%02x", (unsigned int) text[i]);
-	}
-	printf("\".\n");
-
-	printf("component_by_item = [");
-	for (size_t i = 0; i < component_by_item.size(); ++i) {
-		printf("%zu,", component_by_item[i]);
-	}
-	printf("].\n");
-
-	printf("sorted_items = [");
-	for (size_t i = 0; i < sorted_items.size(); ++i) {
-		printf("%zu,", sorted_items[i]);
-	}
-	printf("].\n");
-	*/
 	
-	// TODO: write step text here. Read the original article, explain better.
-	// Для перехода к следующей итерации нам нужна дополнительная память:
-	//   новый порядок, потому что мы сортируем по второй половине
-	//   сдвигом, чтобы воспользоваться в стабильной сортировке подсчётом.
-	//   Но резуьтат сортировки подсчётом мы при этом процессе записываем
-	//   в старый;
-	//   и старые номера компонент по элементам, это наши цифры в сортироке
-	//   подсчётом, т.к. мы после сортировки должны получить новые номера
-	//   компонент по обоим парам, не только по первой, при этом мы
-	//   используем массив старых компонент, чтобы сравнивать.
-	// Мы не можем и проходится по старому, и писать туда новый порядок,
-	//   т.к. это перезатрёт позиции, в которые мы ещё не зашли.
-	// Если пишете какой-то алгоритм в первый раз, создавайте максимальное
-	//   количество массивов, для каждой величины по смыслу: новые величины
-	//   после итерации, старые до итерации и т.п. Потом в конце итерации
-	//   замените старые на новые.
-	std::vector<size_t> new_sorted_items(text_mod.size());
-	std::vector<size_t> new_component_by_item(text_mod.size());
-	// ull to avoid comparision between signed and unsigned, it's
-	//   a warning. Don't think about it when you write it first
-	//   time, you'll fix that.
-	//   TODO: сделать секцию: особенности реализации на C++, там это указать.
-	// While previous iteration was not enough.
-	// (1ull << (len_log - 1)) < text_mod.size() is wrong. What'll happen?
-	//   We need to sort by more than, length characters, This will stop
-	//   the first time it's greater than length, without sorting!
-	//   It may become greater, just only once! If it wasn't greater or
-	//   equal before.
-	for (size_t len_log = 1; (1ull << (len_log - 1)) < text_mod.size(); ++len_log) {
-		// Сортируем по второй половине, просто сдвинув
-		//   индексы: для каждой второй половины индекс
-		//   первой половины определяется однозначно, а
-		//   как отсортированы вторые половины знаем.
-		const size_t len = static_cast<size_t>(1) << len_log;
-		const size_t half_len = len / 2;
-		// Отсортированы суффиксы по первым 2^(k - 1) символам.
-		// Это вторые половины некоторых строк, т.к.
-		//   строки зациклены.
-		// Детально: просто возьмём любой суффикс, возьмём
-		//   вторую половину из первых 2^k символов. Это тоже
-		//   некоторый суффикс. И мы знаем порядок всех таких
-		//   суффиксов, если оставим их и отсортируем
-		//   (мультимножества строк совпадают).
-		// Переидем к первым половинам, вычтя половину длины,
-		//   получим упорядочивание строк длины 2^k по вторым
-		//   половинам. Т.е. мы знаем строку с минимальной
-		//   первой половиной, со второй по величине, если
-		//   просто произведем операции. Тогда просто к каждой
-		//   применим эту операцию и получим упорядочивание.
-		// TODO: найти это в оригинальной публикации, посмотреть, как там пишут, обсудить.
-		for (size_t i = 0; i < text_mod.size(); ++i) {
-			new_sorted_items[i] = (sorted_items[i] + text_mod.size() - half_len) % text_mod.size();
-		}
-		// Сортировка по второй половине закончена.
-		
-		// Сортируем по первой половине (по компоненте первого элемента пары) подсчётом.
-		// Сдвигов n, потому компонент эквивалентности нужно не более, чем n.
-		// Чтобы сортировать устойчиво по второй половине, нам нужно проходить
-		//   по элементам в перевернутом отсортированном порядке.
-		//   Нам нужен отсортрованный порядок, потому будем его хранить.
-		// TODO: потом вынести, чтобы постоянно память не выделять.
-		//   Это в шаги по оптимизации написать. Код оставить, просто
-		//   закомментировать. Указать наверху, что оптимизация №2, на первом
-		//   написании пропустить. А здесь указать, первое написание, понятное.
-		// Типичная сортировка подсчётом, правда алфавит -- компоненты
-		//   эквивалентности с прошлого шага.
+		// Этап 1: дополнение строки.
+		std::string text_mod(text);
+		text_mod.push_back(kTextEndChr);
+
+		// Общие массивы для этапов, остаются с предыдущей итерации
+		//   для новой.
+		std::vector<size_t> sorted_items;
+		std::vector<size_t> component_by_item(text_mod.size(), 0);
+
+		// Этап 2.
+		// Детали в M_notes.txt, прочитайте, с радостью отвечу на ваши вопросы.
+		// Сортируем строки длины 1.
 		{
-			std::vector<size_t> num_occurs(text_mod.size(), 0);
+			std::vector<size_t> num_occurs(static_cast<size_t>(kSrcStrAlphabetMaxChr) + 1, 0);
 			for (size_t i = 0; i < text_mod.size(); ++i) {
-				const size_t digit = component_by_item[i];
+				const size_t digit = text_mod[i];
 				num_occurs[digit] += 1;
 			}
-			// Исключающие префиксные суммы, как говорят публикации
-			//   алгоритма Каркайнена-Сандерса.
+			// Замечание 1 из M_notes.txt. Прочитайте, с радостью отвечу на ваши вопросы.
 			std::vector<size_t>& num_items_before_digit = num_occurs;
 			size_t cur_digit_num_items_before = 0;
-			for (size_t i = 0; i < num_occurs.size(); ++i) {
+			for (size_t i = 0; i <= kSrcStrAlphabetMaxChr; ++i) {
 				size_t num_occurences = num_occurs[i];
 				num_items_before_digit[i] = cur_digit_num_items_before;
 				// For the next iteration this pos is included.
 				cur_digit_num_items_before += num_occurences;
 			}
-			// Перебираем пары в порядке сортировки по второй половине.
-			for (size_t i: new_sorted_items) {
-				// Берем компоненту первой половины.
-				const size_t digit = component_by_item[i];
+			sorted_items.assign(text_mod.size(), 0);
+			for (size_t i = 0; i < text_mod.size(); ++i) {
+				const size_t digit = text_mod[i];
 				sorted_items[num_items_before_digit[digit]] = i;
 				num_items_before_digit[digit] += 1;
 			}
 			// Считаем номера компонент эквивалентности.
-			new_component_by_item[sorted_items[0]] = 0;
+			component_by_item[sorted_items[0]] = 0;
 			for (size_t i = 1; i < sorted_items.size(); ++i) {
-				size_t prev_item = sorted_items[i - 1];
-				size_t cur_item = sorted_items[i];
-
-				size_t prev_item_first_half_comp  = component_by_item[prev_item];
-				size_t prev_item_second_half_comp = component_by_item[(prev_item + half_len) % text_mod.size()];
-
-				size_t cur_item_first_half_comp  = component_by_item[cur_item];
-				size_t cur_item_second_half_comp = component_by_item[(cur_item + half_len) % text_mod.size()];
-
-				// We already know (p_f, p_s) <= (c_f, c_s),
-				//   it's p_f < c_f || (p_f == c_f && p_s <= c_s)
-				// We just they are not equal we just need to
-				//   check p_f < c_f || p_s < c_s, because if
-				//   p_f < c_f is not true, p_f >= c_f,
-				//   then p_f == c_f.
-				if (prev_item_first_half_comp < cur_item_first_half_comp || prev_item_second_half_comp < cur_item_second_half_comp) {
-					new_component_by_item[cur_item] = new_component_by_item[prev_item] + 1;
+				// Замечание 2 из M_notes.txt. Прочитайте, с радостью отвечу на ваши вопросы.
+				if (text[sorted_items[i]] != text[sorted_items[i - 1]]) {
+					component_by_item[sorted_items[i]] = component_by_item[sorted_items[i - 1]] + 1;
 				} else {
-					new_component_by_item[cur_item] = new_component_by_item[prev_item];
+					component_by_item[sorted_items[i]] = component_by_item[sorted_items[i - 1]];
 				}
 			}
-			// Массив новых компонент переходит в следующую итерацию,
-			//   а предыдущий используем как временную память.
-			//   Мы её перезапишем.
-			// А массив отсортированного порядка мы поменяли ещё
-			//   при сортировке по первой половине.
-			std::swap(new_component_by_item, component_by_item);
 		}
+
+		#if DEBUG
+			printf("text = \"");
+			for (size_t i = 0; i < text.size(); ++i) {
+				if (i != 0 && i % 5 == 0) {
+					printf(" ");
+				}
+				printf("\\%02x", (unsigned int) text[i]);
+			}
+				printf("\".\n");
+
+			printf("component_by_item = [");
+			for (size_t i = 0; i < component_by_item.size(); ++i) {
+				printf("%zu,", component_by_item[i]);
+			}
+			printf("].\n");
 	
-		/*
-		printf("After len_log = %zu.\n", len_log);
-		printf("component_by_item = [");
-		for (size_t i = 0; i < component_by_item.size(); ++i) {
-			printf("%zu,", component_by_item[i]);
-		}
-		printf("].\n");
+			printf("sorted_items = [");
+			for (size_t i = 0; i < sorted_items.size(); ++i) {
+				printf("%zu,", sorted_items[i]);
+			}
+			printf("].\n");
+		#endif
 
-		printf("sorted_items = [");
-		for (size_t i = 0; i < sorted_items.size(); ++i) {
-			printf("%zu,", sorted_items[i]);
-		}
-		printf("].\n");
+		// Переход к следующей итерации из M_notes.txt. Прочитайте, с радостью отвечу на ваши вопросы.
+		// TODO: write explaination as a step. Read the original article, explain better.
+		std::vector<size_t> new_sorted_items(text_mod.size());
+		std::vector<size_t> new_component_by_item(text_mod.size());
+		// ull to avoid comparision between signed and unsigned, it's
+		//   a warning. Don't think about it when you write it first
+		//   time, you'll fix that.
+		//   TODO: сделать секцию: особенности реализации на C++, там это указать.
+
+		// While previous iteration was not enough.
+		// (1ull << (len_log - 1)) < text_mod.size() is wrong. What'll happen?
+		//   We need to sort by more than, length characters, This will stop
+		//   the first time it's greater than length, without sorting!
+		//   It may become greater, just only once! If it wasn't greater or
+		//   equal before.
+		for (size_t len_log = 1; (1ull << (len_log - 1)) < text_mod.size(); ++len_log) {
+			// Сортировка по второй половине из M_notes.txt. Прочитайте, с радостью отвечу на ваши вопросы.		
+			const size_t len = static_cast<size_t>(1) << len_log;
+			const size_t half_len = len / 2;
+			for (size_t i = 0; i < text_mod.size(); ++i) {
+				new_sorted_items[i] = (sorted_items[i] + text_mod.size() - half_len) % text_mod.size();
+			}
+			// Сортировка по второй половине закончена.
+
+			// Сортировка по первой половине из M_notes.txt. Прочитайте, с радостью отвечу на ваши вопросы.		
+			{
+				std::vector<size_t> num_occurs(text_mod.size(), 0);
+				for (size_t i = 0; i < text_mod.size(); ++i) {
+					const size_t digit = component_by_item[i];
+					num_occurs[digit] += 1;
+				}
+				// Исключающие префиксные суммы, как говорят публикации
+				//   алгоритма Каркайнена-Сандерса.
+				std::vector<size_t>& num_items_before_digit = num_occurs;
+				size_t cur_digit_num_items_before = 0;
+				for (size_t i = 0; i < num_occurs.size(); ++i) {
+					size_t num_occurences = num_occurs[i];
+					num_items_before_digit[i] = cur_digit_num_items_before;
+					// For the next iteration this pos is included.
+					cur_digit_num_items_before += num_occurences;
+				}
+				// Перебираем пары в порядке сортировки по второй половине.
+				for (size_t i: new_sorted_items) {
+					// Берем компоненту первой половины.
+					const size_t digit = component_by_item[i];
+					sorted_items[num_items_before_digit[digit]] = i;
+					num_items_before_digit[digit] += 1;
+				}
+				// Сортировка по первой половине закончена.
+				
+				// Считаем номера компонент эквивалентности.
+				new_component_by_item[sorted_items[0]] = 0;
+				for (size_t i = 1; i < sorted_items.size(); ++i) {
+					size_t prev_item = sorted_items[i - 1];
+					size_t cur_item = sorted_items[i];
+	
+					size_t prev_item_first_half_comp  = component_by_item[prev_item];
+					size_t prev_item_second_half_comp = component_by_item[(prev_item + half_len) % text_mod.size()];
+	
+					size_t cur_item_first_half_comp  = component_by_item[cur_item];
+					size_t cur_item_second_half_comp = component_by_item[(cur_item + half_len) % text_mod.size()];
+
+					// We already know (p_f, p_s) <= (c_f, c_s),
+					//   it's p_f < c_f || (p_f == c_f && p_s <= c_s)
+					// We just they are not equal we just need to
+					//   check p_f < c_f || p_s < c_s, because if
+					//   p_f < c_f is not true, p_f >= c_f,
+					//   then p_f == c_f.
+					if (prev_item_first_half_comp < cur_item_first_half_comp || prev_item_second_half_comp < cur_item_second_half_comp) {
+						new_component_by_item[cur_item] = new_component_by_item[prev_item] + 1;
+					} else {
+						new_component_by_item[cur_item] = new_component_by_item[prev_item];
+					}
+				}
+				// Массив новых компонент переходит в следующую итерацию,
+				//   а предыдущий используем как временную память.
+				//   Мы её перезапишем.
+				// А массив отсортированного порядка мы поменяли ещё
+				//   при сортировке по первой половине.
+				std::swap(new_component_by_item, component_by_item);
+			}
 		
-		printf("\n");
-		*/
-	}
-	// После всех итераций отсортировали по большому количеству символов (>= n),
-	//   по факту получили сортировку суффиксов.
-	// Только удалим символ ноль, он лежит первым, т.к. это самый маленький
-	//   суффикс.
-	//   TODO: добавить в шаги, указать здесь шаг, как выше.
-	sorted_items.erase(sorted_items.begin(), sorted_items.begin() + 1);
-	suffix_array = std::move(sorted_items);
-	// После всех итераций размер каждой компоненты равен одному,
-	//   т.к. все элементы различны. И это просто индекс суффикса
-	//   в суффиксном массиве (обратный суффиксный массив).
-	//   TODO: добавить в шаги, указать здесь шаг, как выше.
-	//   TODO: указать, зачем обратный суффиксный массив и в шаге, и тут: для lcp.
-	// Только нужно удалить компоненту по item-у text.size(), т.к это нулевой символ.
-	//   И все компоненты сдвинуть на один, т.к. первая компонента -- компонента
-	//   нулевого символа.
-	component_by_item.erase(component_by_item.end() - 1, component_by_item.end());
-	for (size_t& component: component_by_item) {
-		component -= 1;
-	}
-	inv_suffix_array = std::move(component_by_item);
-}
+			#if DEBUG
+				printf("After len_log = %zu.\n", len_log);
+				printf("component_by_item = [");
+				for (size_t i = 0; i < component_by_item.size(); ++i) {
+					printf("%zu,", component_by_item[i]);
+				}
+				printf("].\n");
+	
+				printf("sorted_items = [");
+				for (size_t i = 0; i < sorted_items.size(); ++i) {
+					printf("%zu,", sorted_items[i]);
+				}
+				printf("].\n");
+			
+				printf("\n");
+			#endif
+		}
 
+		// После всех итераций отсортировали по большому количеству символов (>= n),
+		//   по факту получили сортировку суффиксов.
+		// Только удалим символ ноль, он лежит первым, т.к. это самый маленький
+		//   суффикс.
+		//   TODO: добавить в шаги, указать здесь шаг, как выше.
+		sorted_items.erase(sorted_items.begin(), sorted_items.begin() + 1);
+		suffix_array = std::move(sorted_items);
+		
+		// После всех итераций размер каждой компоненты равен одному,
+		//   т.к. все элементы различны. И это просто индекс суффикса
+		//   в суффиксном массиве (обратный суффиксный массив).
+		//   TODO: добавить в шаги, указать здесь шаг, как выше.
+		//   TODO: указать, зачем обратный суффиксный массив и в шаге, и тут: для lcp.
+		// Только нужно удалить компоненту по item-у text.size(), т.к это нулевой символ.
+		//   И все компоненты сдвинуть на один, т.к. первая компонента -- компонента
+		//   нулевого символа.
+		component_by_item.erase(component_by_item.end() - 1, component_by_item.end());
+		for (size_t& component: component_by_item) {
+			component -= 1;
+		}
+		inv_suffix_array = std::move(component_by_item);
+	}
+}
+	
 int main() {
 	std::string text;
 	
@@ -382,7 +239,7 @@ int main() {
 	
 	std::vector<size_t> suffix_array;
 	std::vector<size_t> inv_suffix_array;
-	CalculateSuffixArray(text, suffix_array, inv_suffix_array);
+	SuffixArray::Calculate(text, suffix_array, inv_suffix_array);
 	for (size_t i = 0; i < suffix_array.size(); ++i) {
 		// В ответе просят в 1-индексации.
 		printf("%zu ", suffix_array[i] + 1);
