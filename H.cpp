@@ -12,21 +12,42 @@
 
 #define DEBUG 0
 
-// std::complex => >1.587sec - TL
-// Свой complex =>  0.987sec - OK
-// std::complex без дополнительных флагов при компиляции
-//   будет проверять double на nan, из-за этого замедление.
+/**
+ * \brief   Complex number class.
+ *
+ * \details std::complex => >1.587sec - TL,
+ *          Custom complex (without any tricks) =>  0.987sec - OK,
+ *          std::complex without special flags for compilation
+ *          will check double for being nan, thus slow computations.
+ */
 struct MyComplex {
+	/**
+	 * \brief   Creates complex number with zero real and imaginary parts.
+	 */
 	MyComplex()
 	  : re_(0), im_(0) {}
 	  
-	MyComplex(const MyComplex& other) = default;
-
-	explicit MyComplex(double value)
-	  : re_(value), im_(0) {}
-	  
+	/**
+	 * \brief   Creates complex number with specified real and imaginary parts.
+	 *
+	 * \param[in]     re   Real part, double.
+	 * \param[in]     im   Imaginary part, double.
+	 */
 	explicit MyComplex(double re, double im)
 	  : re_(re), im_(im) {}
+
+	/**
+	 * \brief   Creates complex number with specified real part and zero imaginary part.
+	 *
+	 * \note    Suitable as a conversion function for doubles, but is explicit to avoid
+	 *          bugs.
+	 * 
+	 * \param[in]     re   Real part, double.
+	 */
+	explicit MyComplex(double value)
+	  : re_(value), im_(0) {}
+
+	MyComplex(const MyComplex& other) = default;
 
 	MyComplex& operator*=(MyComplex& rhs) {
 		double re1 = re_ * rhs.re_ - im_ * rhs.im_;
