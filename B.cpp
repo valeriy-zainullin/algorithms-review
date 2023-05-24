@@ -2,7 +2,7 @@
 #include <cassert>
 #include <cinttypes>
 #include <cstdint>
-#include <cstdio>
+#include <iostream>
 #include <vector>
 
 #define DEBUG 0
@@ -17,6 +17,15 @@ struct Point {
 	int32_t x;
 	int32_t y;
 };
+std::istream& operator>>(std::istream& stream, Point& point) {
+	stream >> point.x >> point.y;
+	return stream;
+}
+
+std::ostream& operator<<(std::ostream& stream, const Point& point) {
+	stream << point.x << ' ' << point.y;
+	return stream;
+}
 
 /**
  * \brief   Compares points by polar angle from the selected point.
@@ -277,19 +286,19 @@ int64_t CalculateDoubledArea(const std::vector<Point>& polygon) {
 
 int main() {
 	size_t num_points = 0;
-	scanf("%zu", &num_points);
+	std::cin >> num_points;
 	
 	std::vector<Point> points(num_points);
 	for (size_t i = 0; i < num_points; ++i) {
 		Point& point = points[i];
-		scanf("%" SCNd32 " %" SCNd32, &point.x, &point.y);
+		std::cin >> point;
 	}
 	
 	std::vector<size_t> convex_hull = MakeConvexHull(points);
 	printf("%zu\n", convex_hull.size());
 	for (size_t i = 0; i < convex_hull.size(); ++i) {
 		const Point& point = points[convex_hull[i]];
-		printf("%" PRId32 " %" PRId32 "\n", point.x, point.y);
+		std::cout << point;
 	}
 	
 	std::vector<Point> convex_hull_points(convex_hull.size());
@@ -319,9 +328,9 @@ int main() {
 	//   фигуры, там есть только деление на два.
 	// Потому ответа оканчивается на .0 или .5.
 	if (doubled_area % 2 == 0) {
-		printf("%" PRId64 ".0\n", doubled_area / 2);
+		std::cout << doubled_area / 2 << ".0\n";
 	} else {
-		printf("%" PRId64 ".5\n", doubled_area / 2);
+		std::cout << doubled_area / 2 << ".5\n";
 	}
 	
 	return 0;
