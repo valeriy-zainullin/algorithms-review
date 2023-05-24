@@ -18,6 +18,72 @@ struct Point {
 	int32_t y;
 };
 
+/**
+ * \brief   Compares points by polar angle from the selected point.
+ *
+ * \details Does so by comparing tangents.
+ *
+ * \note    Points must not be above the selected point.
+ */
+struct PolarAngleComparator {
+	PolarAngleComparator(size_t selected_index, const std::vector<Point>& points)
+	  : selected_index_(selected_index), points_(points) {}
+
+	bool operator()(size_t lhs, size_t rhs) const {
+		const Point& p1    = points_[lhs];
+		const Point& p2    = points_[rhs];
+		const Point& start = points_[selected_index_];
+			
+		int32_t p1_dx = p1.x - start.x;
+		int32_t p1_dy = p1.y - start.y;
+			
+		int32_t p2_dx = p2.x - start.x;
+		int32_t p2_dy = p2.y - start.y;
+			
+		// Сравнение в сортировке по полярному углу. Детали в B_notes.cpp. Прочитайте,
+		//   буду рад ответить на вопросы.
+			
+		if (p1_dx == 0 && p2_dx != 0) {
+			return true;
+		}
+		if (p1_dx != 0 && p2_dx == 0) {
+			return false;
+		}
+		if (p1_dx == 0 && p2_dx == 0) {
+			// Полярный угол с центром в выбранной точке
+			//   у точек один: pi/2. Тогда предпочитаем
+			//   ближайшую.
+			return p1_dy < p2_dy;
+		}
+
+		if (p1_dx < 0) {
+			p1_dx *= -1;
+			p1_dy *= -1;
+		}
+		 
+		if (p2_dx < 0) {
+			p2_dx *= -1;
+			p2_dy *= -1;
+		}
+		 	
+		int64_t tan_cmp = static_cast<int64_t>(p1_dy) * p2_dx - static_cast<int64_t>(p2_dy) * p1_dx;
+		if (tan_cmp != 0) {
+			return tan_cmp > 0;
+		}
+		
+		// Углы совпадают, выбираем ближайшую.
+
+		int64_t p1_distsq = static_cast<int64_t>(p1_dx) * p1_dx + static_cast<int64_t>(p1_dy) * p1_dy;
+		int64_t p2_distsq = static_cast<int64_t>(p2_dx) * p2_dx + static_cast<int64_t>(p2_dy) * p2_dy;
+		  	
+		return p1_distsq < p2_distsq;
+	}
+	
+	private:
+		size_t selected_index_ = 0;
+		const std::vector<Point>& points_;
+};
+
 // Алгоритм Джарвиса (заворачивания подарка).
 // TODO: написать объяснение, доказать.
 /**
@@ -87,55 +153,7 @@ std::vector<size_t> MakeConvexHull(const std::vector<Point>& points) {
 	std::sort(
 		indices.begin(),
 		indices.end(),
-		[&](size_t lhs, size_t rhs) {
-			const Point& p1    = points[lhs];
-			const Point& p2    = points[rhs];
-			const Point& start = points[selected_index];
-			
-			int32_t p1_dx = p1.x - start.x;
-			int32_t p1_dy = p1.y - start.y;
-			
-			int32_t p2_dx = p2.x - start.x;
-			int32_t p2_dy = p2.y - start.y;
-			
-			// Сравнение в сортировке по полярному углу. Детали в B_notes.cpp. Прочитайте,
-			//   буду рад ответить на вопросы.
-			
-			if (p1_dx == 0 && p2_dx != 0) {
-				return true;
-			}
-			if (p1_dx != 0 && p2_dx == 0) {
-				return false;
-			}
-			if (p1_dx == 0 && p2_dx == 0) {
-				// Полярный угол с центром в выбранной точке
-				//   у точек один: pi/2. Тогда предпочитаем
-				//   ближайшую.
-				return p1_dy < p2_dy;
-			}
-
-		 	if (p1_dx < 0) {
-		 		p1_dx *= -1;
-		 		p1_dy *= -1;
-		 	}
-		 	
-		 	if (p2_dx < 0) {
-		 		p2_dx *= -1;
-		 		p2_dy *= -1;
-		 	}
-		 	
-		 	int64_t tan_cmp = static_cast<int64_t>(p1_dy) * p2_dx - static_cast<int64_t>(p2_dy) * p1_dx;
-		 	if (tan_cmp != 0) {
-		 		return tan_cmp > 0;
-		 	}
-		 	
-		 	// Углы совпадают, выбираем ближайшую.
-
-		  	int64_t p1_distsq = static_cast<int64_t>(p1_dx) * p1_dx + static_cast<int64_t>(p1_dy) * p1_dy;
-		  	int64_t p2_distsq = static_cast<int64_t>(p2_dx) * p2_dx + static_cast<int64_t>(p2_dy) * p2_dy;
-		  	
-		  	return p1_distsq < p2_distsq;
-		}
+		PolarAngleComparator{selected_index, points}
 	);
 	
 	#if DEBUG
